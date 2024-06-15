@@ -1,0 +1,45 @@
+---
+- name: Get nginx gpg public key
+  ansible.builtin.get_url:
+    url: https://nginx.org/keys/nginx_signing.key
+    dest: /etc/apt/trusted.gpg.d/nginx.asc
+
+- name: Run gpg dry run and extract fingerprint
+  ansible.builtin.shell: gpg --dry-run --quiet --no-keyring --import --import-options import-show  /etc/apt/trusted.gpg.d/nginx.asc
+  register: dry_run_result
+
+- name: Verify the fingerprint and fail playbook if no match
+  ansible.builtin.fail:
+    msg: Result fingerprint does not match the official fingerprint
+  when: "gpg_fingerprint not in dry_run_result.stdout"
+
+- name: Add nginx repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/trusted.gpg.d/nginx.asc] http://nginx.org/packages/ubuntu {{ ansible_distribution_release }} nginx"
+    state: present
+    update_cache: true
+
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+    update_cache: true
+    state: present
+
+- name: Template default Nginx config file out to target
+  ansible.builtin.template:
+    src: "{{ nginx_conf_path }}"
+    dest: /etc/nginx/nginx.conf
+    mode: 0644
+    owner: root
+    group: root
+  notify: Restart Nginx
+
+- name: Template Nginx server config files out to target
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: /etc/nginx/conf.d/{{ item | basename | split('.j2') | first }}
+    mode: 0644
+    owner: root
+    group: root
+  notify: Reload Nginx
+  with_fileglob: "{{ nginx_vhosts_dir_path }}/*"

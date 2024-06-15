@@ -1,0 +1,3 @@
+---
+- name: Include OS-specific Nginx configuration tasks
+  ansible.builtin.include_tasks: "setup-{{ ansible_os_family|lower }}.yml"

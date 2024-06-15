@@ -1,0 +1,7 @@
+---
+gpg_fingerprint: 573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62
+
+nginx_user: www-data
+
+nginx_conf_path: templates/default-nginx.conf.j2
+nginx_vhosts_dir_path: templates/default-vhosts/
